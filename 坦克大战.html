@@ -616,7 +616,7 @@ function roundRect(ctx, x, y, w, h, r) {
 class Game {
   constructor() {
     this.state = 'title';
-    this.map = [];
+    this.map = generateMap();
     this.player = null;
     this.enemies = [];
     this.bullets = [];
@@ -631,7 +631,7 @@ class Game {
     this.spawnTimer = 0;
     this.baseDestroyed = false;
     this.keys = {};
-    this.startTimer = 0; // countdown before game starts
+    this.startTimer = 0;
   }
 
   get alive() { return this.enemies.filter(e => e.active); }
@@ -663,8 +663,14 @@ class Game {
       <div style="font-size:16px;color:#aaa;margin-top:15px;">准备战斗！</div>
     `;
     sfxStart();
-    this.startTimer = 90; // ~1.5 seconds
     this.state = 'starting';
+    // Hide overlay after 1.5s to start the game
+    setTimeout(() => {
+      if (this.state === 'starting') {
+        this.state = 'playing';
+        overlay.style.display = 'none';
+      }
+    }, 1500);
   }
 
   updateUI() {
@@ -710,15 +716,7 @@ class Game {
   update() {
     if (this.state === 'title' || this.state === 'gameover') return;
 
-    // Starting countdown
-    if (this.state === 'starting') {
-      this.startTimer--;
-      if (this.startTimer <= 0) {
-        this.state = 'playing';
-        overlay.style.display = 'none';
-      }
-      return;
-    }
+    if (this.state === 'starting') return;
 
     // Spawn enemies
     if (this.spawned < this.totalEnemies) {
@@ -857,6 +855,7 @@ class Game {
   }
 
   draw() {
+    try {
     // Background - classic dark green
     ctx.fillStyle = '#2d2d2d';
     ctx.fillRect(0, 0, W, H);
@@ -890,9 +889,11 @@ class Game {
       ctx.textAlign = 'center';
       ctx.fillText('基地被毁！', 13*TILE, 25*TILE);
     }
+    } catch(e) { console.error('Draw error:', e); }
   }
 
   drawMap(ctx) {
+    if (!this.map || this.map.length === 0) return;
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const t = this.map[r][c];
@@ -963,8 +964,10 @@ class Game {
 const game = new Game();
 
 function gameLoop(time) {
-  game.update();
-  game.draw();
+  try {
+    game.update();
+    game.draw();
+  } catch(e) { console.error('Game error:', e); }
   requestAnimationFrame(gameLoop);
 }
 
